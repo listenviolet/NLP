@@ -1,21 +1,20 @@
-Dataset:
-	PTB dataset:
-	http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-example.tgz
+## Dataset:
+	[PTB dataset](http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-example.tgz)
 
 	with 9998 different words and one <unk>
 
 	add <eos> manually => total 10000 words in vocab file.
 
-Batching method:
+## Batching method:
 	combine all the sentences into a string and then split it.
 	each batch contains #batch_size subsequences
 	each subsequence length: num_steps
 	so that num_batches: total_words // (batch_size * num_steps)
 
-Reduce parameter numbers:
+## Reduce parameter numbers:
 	share weight between softmax and embedding
 
-Results:
+## Results:
 	(the results are different from the book)
 	In iteration: 1
 	After 0 steps, perplexity is 10048.026
