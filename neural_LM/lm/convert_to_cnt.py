@@ -1,9 +1,9 @@
 import codecs 
 import sys
 
-RAW_DATA = '../data/ptb.train.txt'
+# RAW_DATA = '../data/ptb.train.txt'
 VOCAB = '../data/ptb.vocab'
-OUTPUT_DATA = '../data/ptb.train'
+# OUTPUT_DATA = '../data/ptb.train'
 
 def convert(RAW_DATA, OUTPUT_DATA):
 	# Read the vocab file
