@@ -1,3 +1,5 @@
+import tensorflow as tf 
+
 MAX_LEN = 50 # max length of a sentence
 SOS_ID = 1   # <sos> id
 
@@ -6,7 +8,7 @@ def MakeDataset(file_path):
 	dataset = tf.data.TextLineDataset(file_path)
 
 	# split by space
-	dataset = dataset.map(lambda string: tf.string_splict([string]).values)
+	dataset = dataset.map(lambda string: tf.string_split([string]).values)
 	# convert to tf.int32 format
 	dataset = dataset.map(lambda string: tf.string_to_number(string, tf.int32))
 	# (sentence, words_num_in_sentence) into Dataset
@@ -31,7 +33,7 @@ def MakeSrcTrgDataset(src_path, trg_path, batch_size):
 		((src_input, src_len), (trg_label, trg_len)) = (src_tuple, trg_tuple)
 		src_len_ok = tf.logical_and(tf.greater(src_len, 1), tf.less_equal(src_len, MAX_LEN))
 		trg_len_ok = tf.logical_and(tf.greater(trg_len, 1), tf.less_equal(trg_len, MAX_LEN))
-		return logical_and(src_len_ok, trg_len_ok)
+		return tf.logical_and(src_len_ok, trg_len_ok)
 
 	dataset = dataset.filter(FilterLength)
 

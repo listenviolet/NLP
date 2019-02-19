@@ -5,7 +5,7 @@ from batch import MakeDataset, MakeSrcTrgDataset
 SRC_TRAIN_DATA = '../data/train.en'
 TRG_TRAIN_DATA = '../data/train.zh'
 
-CHECKPOINT_PATH = '../log/'
+CHECKPOINT_PATH = '../attention_log/atten'
 
 HIDDEN_SIZE = 1024
 NUM_LAYERS = 2
@@ -22,12 +22,12 @@ class NMTModel(object):
 	def __init__(self):
 
 		''' Define the encoder and decoder 
+			bidirectional_dynamic_rnn
 		'''
-		self.enc_cell = tf.nn.rnn_cell.MultiRNNCell(
-			[tf.nn.rnn_cell.BasicLSTMCell(HIDDEN_SIZE) for _ in range(NUM_LAYERS)])
+		self.enc_cell_fw = tf.nn.rnn_cell.BasicLSTMCell(HIDDEN_SIZE)
+		self.enc_cell_bw = tf.nn.rnn_cell.BasicLSTMCell(HIDDEN_SIZE)
 		self.dec_cell = tf.nn.rnn_cell.MultiRNNCell(
 			[tf.nn.rnn_cell.BasicLSTMCell(HIDDEN_SIZE) for _ in range(NUM_LAYERS)])
-
 		''' Define word embeddings of the source and target language
 		'''
 		self.src_embedding = tf.get_variable('src_emb', [SRC_VOCAB_SIZE, HIDDEN_SIZE])
@@ -40,9 +40,6 @@ class NMTModel(object):
 		else:
 			self.softmax_weight = tf.get_variable("weight", [HIDDEN_SIZE, TRG_VOCAB_SIZE])
 		self.softmax_bias = tf.get_variable("softmax_bias", [TRG_VOCAB_SIZE])
-
-	# def test(self, a):
-	# 	print(a)
 
 	''' Construct the forward compute graph
 	'''
@@ -64,13 +61,27 @@ class NMTModel(object):
 			enc_state: a tuple contains #NUM_LAYERS LSTMStateTuple classes. dims: [batch_size, state_size]
 		'''
 		with tf.variable_scope("encoder"):
-			enc_outputs, enc_state = tf.nn.dynamic_rnn(self.enc_cell, src_emb, src_size, dtype = tf.float32)
-
+			enc_outputs, enc_state = tf.nn.bidirectional_dynamic_rnn(self.enc_cell_fw, self.enc_cell_bw, src_emb, src_size, dtype = tf.float32)
+			enc_outputs = tf.concat([enc_outputs[0], enc_outputs[1]], -1)
 		''' Decoder - use dynamic_rnn
 			dec_outputs: [batch_size, max_time, HIDDEN_SIZE]
 		'''	
 		with tf.variable_scope("decoder"):
-			dec_outputs, _ = tf.nn.dynamic_rnn(self.dec_cell, trg_emb, trg_size, initial_state = enc_state)
+			''' Attention mechanism
+				memory_sequence_length: Tensor: [batch_size]
+				representing every sentence length in batch
+				according to this, attention mechanism set 0 in padding postions
+			''' 
+			attention_mechanism = tf.contrib.seq2seq.BahdanauAttention(HIDDEN_SIZE, enc_outputs, memory_sequence_length = src_size)
+
+			# Wrap with decoder
+			attention_cell = tf.contrib.seq2seq.AttentionWrapper(self.dec_cell, attention_mechanism, attention_layer_size = HIDDEN_SIZE)
+
+			# Use attention_cell and dynamic_rnn construct decoder
+			# not need to set init_state => get from attention
+			# former without attention: 
+			# dec_outputs, _ = tf.nn.dynamic_rnn(self.dec_cell, trg_emb, trg_size, initial_state = enc_state)
+			dec_outputs, _ = tf.nn.dynamic_rnn(attention_cell, trg_emb, trg_size, dtype = tf.float32)
 
 		''' Compute log perplexity each time step
 		''' 
